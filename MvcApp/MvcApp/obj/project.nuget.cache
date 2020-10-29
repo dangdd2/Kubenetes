@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "2bbeFvHF8bw+5WRCt5v8ksSuWr2zCVSr+o3FPPg+scy/xUHCzevDHufEOEyxv+MRbLX/M1r740SwUiBy1+t2sA==",
+  "success": true,
+  "projectFilePath": "D:\\Learning\\Docker\\MvcApp\\MvcApp\\MvcApp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\dadd\\.nuget\\packages\\microsoft.visualstudio.azure.containers.tools.targets\\1.10.9\\microsoft.visualstudio.azure.containers.tools.targets.1.10.9.nupkg.sha512"
+  ],
+  "logs": []
+}

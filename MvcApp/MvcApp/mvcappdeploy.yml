@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mvcapp-deployment
+  labels:
+    app: mvcapp
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: mvcapp
+      labels:
+        app: mvcapp
+    spec:
+      containers:
+      - name: mvcapp
+        image: mvcapp
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: mvcapp
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mvcapp-service
+spec:
+  selector:
+    app: mvcapp
+  ports:
+    - port: 80
+  type: NodePort
+  
+  

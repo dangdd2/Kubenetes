@@ -1,0 +1,289 @@
+ ----------------------------------------------------------
+ Docker CLEAN
+ 
+ docker system prune -a
+ 
+ 
+ docker container rm -f (docker ps -a -q)
+ 
+ docker rm --force 0f772f5075cb
+ 
+ 
+ docker image rm -f 9bae72b8fa1b
+ 
+ 
+ 
+docker build -t aspnetapp .
+docker build -t mvcapp .
+ 
+docker run -d -p 8080:80 --name myapp mvcapp
+ 
+docker run -d -p 8080:80 --name myapp aspnetapp
+-----
+
+
+kubectl run mvcapp-deployment --image=mvcapp --port=80 --replicas=3
+
+kubectl get deployments
+
+kubectl get rs
+
+kubectl get pod
+
+kubectl expose deployment mvcapp-deployment --type=NodePort 
+
+kubectl get svc
+
+start microsoft-edge:http://localhost:31592
+
+--clean
+
+kubectl delete deployment mvcapp-deployment
+kubectl delete service mvcapp-deployment
+
+
+kubectl create -f .\mvcappdeploy.yml  
+kubectl delete -f .\mvcappdeploy.yml  
+
+
+
+
+-- get credentials for kubectl to connect to your cluster
+az aks get-credentials -g DefaultResourceGroup-EA -n demo-cluster
+
+
+-- AZURE CLOUD deployment
+--------------------------------------------------------
+
+az login
+az provider register --namespace Microsoft.Network
+az provider register --namespace Microsoft.Compute
+az provider register --namespace Microsoft.OperationsManagement
+
+
+az account list locations
+
+-- create the registry
+
+az acr create -g kube-demo -l uswest -n dangregistry --sku Basic
+
+
+
+
+az aks create -g kube-demo -n demo-cluster --node-vn-size Standard_D1
+
+az aks create --resource-group=kube-demo --name=demo-cluster --node-vm-size Standard_D1 --generate-ssh-keys
+
+az aks get-credentials -g DefaultResourceGroup-EA -n demo-cluster
+az aks enable-addons -a monitoring -g DefaultResourceGroup-EA -n demo-cluster 
+
+
+-- clean
+
+kubectl delete deployment demo-app
+kubectl delete service demo-app
+
+
+kubectl create -f .\demoregistrydeploy.yml  
+kubectl delete -f .\demoregistrydeploy.yml  
+
+
+
+
+---- FULL FLOW
+
+-----------------------------------------------------
+-- docker build, tag 
+step 1 
+
+docker build -t dangregistry.azurecr.io/examples/demo:1.0 . 
+
+docker tag 36ce16ee7d64 dangregistry.azurecr.io/examples/demo:1.0
+
+docker run -p 5000:5000 36ce16ee7d64
+
+
+step 2
+--login to azure ACR
+az acr login --name dangregistry
+docker push dangregistry.azurecr.io/examples/demo:1.0
+
+
+kubectl set image deployment/demo-app demo=dangregistry.azurecr.io/examples/demo:1.0
+
+
+step 3
+------------------------------------------------------
+---------- assign permission
+
+CLIENT_ID = $(az aks show) // get your id for your cluster
+
+az aks show --name demo-cluster --resource-group DefaultResourceGroup-EA --subscription ca0eb6ac-e593-4194-8fcd-ca71c4f279cb
+
+
+ACR_ID= $(az acr show) // get the id for your registry
+az acr show --name dangregistry --resource-group DefaultResourceGroup-EA
+
+---> demo-cluster-agentpool
+az role assignment create --assignee 428aaa1f-622c-4f18-8791-d470fca34229 --role acrpull  --scope /subscriptions/ca0eb6ac-e593-4194-8fcd-ca71c4f279cb/resourceGroups/DefaultResourceGroup-EA/providers/Microsoft.ContainerRegistry/registries/dangregistry
+
+-------------------
+
+
+step 4
+-- create deployment and service
+
+kubectl create deployment demo-app --image=dangregistry.azurecr.io/examples/demo:1.0
+
+kubectl expose deployment demo-app --type=LoadBalancer --port 5000 --target-port 5000
+ 
+
+
+step 5
+---- SCALE OUT
+
+kubectl scale deployment demo-app --replicas=3
+
+
+step 6
+--- Update 
+
+docker build -t dangregistry.azurecr.io/examples/demo:2.0 .
+docker push dangregistry.azurecr.io/examples/demo:2.0
+kubectl set image deployment/demo-app demo=dangregistry.azurecr.io/examples/demo:2.0
+
+step 7
+
+-- clean
+
+kubectl delete deployment demo-app
+kubectl delete service demo-app
+
+
+
+-- delete cluster
+az aks delete -g DefaultResourceGroup-EA -n demo-cluster
+az acr repository delete -n dangregistry --image examples/demo:2.0
+az group delete -g DefaultResourceGroup-EA
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+FOR DEBUGING 
+---------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+debug pod
+kubectl describe pod demo-app-647848cbd9-lg8wq
+
+
+
+Name:         demo-app-647848cbd9-f6h97
+Namespace:    default
+Priority:     0
+Node:         aks-agentpool-81545145-vmss000001/10.240.0.5
+Start Time:   Thu, 29 Oct 2020 13:33:43 +0700
+Labels:       app=demo-app
+              pod-template-hash=647848cbd9
+Annotations:  <none>
+Status:       Pending
+IP:           10.244.1.15
+IPs:
+  IP:           10.244.1.15
+Controlled By:  ReplicaSet/demo-app-647848cbd9
+Containers:
+  demo:
+    Container ID:
+    Image:          dangregistry.azurecr.io/examples/demo:1.0
+    Image ID:
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ErrImagePull
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-bg4qj (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             False
+  ContainersReady   False
+  PodScheduled      True
+Volumes:
+  default-token-bg4qj:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-bg4qj
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type     Reason     Age                From                                        Message
+  ----     ------     ----               ----                                        -------
+  Normal   Scheduled  36s                default-scheduler                           Successfully assigned default/demo-app-647848cbd9-f6h97 to aks-agentpool-81545145-vmss000001
+  Normal   Pulling    23s (x2 over 35s)  kubelet, aks-agentpool-81545145-vmss000001  Pulling image "dangregistry.azurecr.io/examples/demo:1.0"
+  Warning  Failed     23s (x2 over 35s)  kubelet, aks-agentpool-81545145-vmss000001  Failed to pull image "dangregistry.azurecr.io/examples/demo:1.0": rpc error: code = Unknown desc = Error response from daemon: Get https://dangregistry.azurecr.io/v2/examples/demo/manifests/1.0: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information.
+  Warning  Failed     23s (x2 over 35s)  kubelet, aks-agentpool-81545145-vmss000001  Error: ErrImagePull
+  Normal   BackOff    10s (x2 over 35s)  kubelet, aks-agentpool-81545145-vmss000001  Back-off pulling image "dangregistry.azurecr.io/examples/demo:1.0"
+  Warning  Failed     10s (x2 over 35s)  kubelet, aks-agentpool-81545145-vmss000001  Error: ImagePullBackOff
+  
+  
+  
+  ----------------
+  
+  
+  az role assignment create --assignee 428aaa1f-622c-4f18-8791-d470fca34229 --role acrpull  --scope /subscriptions/ca0eb6ac-e593-4194-8fcd-ca71c4f279cb/resourceGroups/DefaultResourceGroup-EA/providers/Microsoft.ContainerRegistry/registries/dangregistry
+{
+  "canDelegate": null,
+  "condition": null,
+  "conditionVersion": null,
+  "description": null,
+  "id": "/subscriptions/ca0eb6ac-e593-4194-8fcd-ca71c4f279cb/resourceGroups/DefaultResourceGroup-EA/providers/Microsoft.ContainerRegistry/registries/dangregistry/providers/Microsoft.Authorization/roleAssignments/16507214-493a-4469-a9b8-e47d223c16ed",
+  "name": "16507214-493a-4469-a9b8-e47d223c16ed",
+  "principalId": "beade4d7-26d9-443b-a2ee-e3c959f24a46",
+  "principalName": "428aaa1f-622c-4f18-8791-d470fca34229",
+  "principalType": "ServicePrincipal",
+  "resourceGroup": "DefaultResourceGroup-EA",
+  "roleDefinitionId": "/subscriptions/ca0eb6ac-e593-4194-8fcd-ca71c4f279cb/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d",
+  "roleDefinitionName": "AcrPull",
+  "scope": "/subscriptions/ca0eb6ac-e593-4194-8fcd-ca71c4f279cb/resourceGroups/DefaultResourceGroup-EA/providers/Microsoft.ContainerRegistry/registries/dangregistry",
+  "type": "Microsoft.Authorization/roleAssignments"
+}
+
+
